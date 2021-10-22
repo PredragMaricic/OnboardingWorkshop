@@ -55,16 +55,6 @@ page 50101 "Shoe List"
                 }
             }
         }
-        area(factboxes)
-        {
-            part(ShoePicture; "Shoe Picture")
-            {
-                ApplicationArea = All;
-                Caption = 'Picture';
-                SubPageLink = "No." = FIELD("No.");
-
-            }
-        }
 
     }
     actions
@@ -218,9 +208,9 @@ page 50101 "Shoe List"
                 }
 
             }
-            group(Warehouse)
+            group("Shoe Warehouse")
             {
-                Caption = 'Warehouse';
+                Caption = 'Shoe Warehouse';
                 Image = Warehouse;
                 action("Warehouse Shipment Lines")
                 {
@@ -604,16 +594,6 @@ page 50102 "Shoe Card"
                 }
             }
         }
-        area(factboxes)
-        {
-            part(ShoePicture; "Shoe Picture")
-            {
-                ApplicationArea = All;
-                Caption = 'Picture';
-                SubPageLink = "No." = FIELD("No.");
-
-            }
-        }
     }
 }
 
@@ -721,218 +701,6 @@ table 50101 "Shoe Management Setup"
     }
 }
 
-page 50105 "Shoe Picture"
-{
-    Caption = 'Shoe Picture';
-    DeleteAllowed = false;
-    InsertAllowed = false;
-    LinksAllowed = false;
-    PageType = CardPart;
-    SourceTable = Shoe;
-
-    layout
-    {
-        area(content)
-        {
-            field(Picture; Picture)
-            {
-                ApplicationArea = All;
-                ShowCaption = false;
-                ToolTip = 'Specifies the picture that has been inserted for the Shoe.';
-            }
-        }
-    }
-
-    actions
-    {
-        area(processing)
-        {
-            action(TakePicture)
-            {
-                ApplicationArea = All;
-                Caption = 'Take';
-                Image = Camera;
-                Promoted = true;
-                PromotedCategory = Process;
-                PromotedIsBig = true;
-                ToolTip = 'Activate the camera on the device.';
-                Visible = CameraAvailable AND (HideActions = FALSE);
-
-                trigger OnAction()
-                begin
-                    TakeNewPicture;
-                end;
-            }
-            action(ImportPicture)
-            {
-                ApplicationArea = All;
-                Caption = 'Import';
-                Image = Import;
-                ToolTip = 'Import a picture file.';
-                Visible = HideActions = FALSE;
-
-                trigger OnAction()
-                begin
-                    ImportFromDevice;
-                end;
-            }
-            action(ExportFile)
-            {
-                ApplicationArea = All;
-                Caption = 'Export';
-                Enabled = DeleteExportEnabled;
-                Image = Export;
-                ToolTip = 'Export the picture to a file.';
-                Visible = HideActions = FALSE;
-
-                trigger OnAction()
-                var
-                    DummyPictureEntity: Record "Picture Entity";
-                    FileManagement: Codeunit "File Management";
-                    ToFile: Text;
-                    ExportPath: Text;
-                begin
-                    TestField("No.");
-                    TestField("Model Name");
-
-                    ToFile := DummyPictureEntity.GetDefaultMediaDescription(Rec);
-                    ExportPath := TemporaryPath + "No." + Format(Picture.MediaId);
-                    Picture.ExportFile(ExportPath + '.' + DummyPictureEntity.GetDefaultExtension);
-
-                    FileManagement.ExportImage(ExportPath, ToFile);
-                end;
-            }
-            action(DeletePicture)
-            {
-                ApplicationArea = All;
-                Caption = 'Delete';
-                Enabled = DeleteExportEnabled;
-                Image = Delete;
-                ToolTip = 'Delete the record.';
-                Visible = HideActions = FALSE;
-
-                trigger OnAction()
-                begin
-                    DeleteShoePicture;
-                end;
-            }
-        }
-    }
-
-    trigger OnAfterGetCurrRecord()
-    begin
-        SetEditableOnPictureActions;
-    end;
-
-    trigger OnOpenPage()
-    begin
-    end;
-
-    var
-
-        [InDataSet]
-        CameraAvailable: Boolean;
-        OverrideImageQst: Label 'The existing picture will be replaced. Do you want to continue?';
-        DeleteImageQst: Label 'Are you sure you want to delete the picture?';
-        SelectPictureTxt: Label 'Select a picture to upload';
-        DeleteExportEnabled: Boolean;
-        HideActions: Boolean;
-        MustSpecifyDescriptionErr: Label 'You must add a description to the Shoe before you can import a picture.';
-        MimeTypeTok: Label 'image/jpeg', Locked = true;
-
-    procedure TakeNewPicture()
-    begin
-        Rec.Find();
-        Rec.TestField("No.");
-
-
-        OnAfterTakeNewPicture(Rec, DoTakeNewPicture());
-    end;
-
-    [Scope('OnPrem')]
-    procedure ImportFromDevice()
-    var
-        FileManagement: Codeunit "File Management";
-        FileName: Text;
-        ClientFileName: Text;
-    begin
-        Find;
-        TestField("No.");
-
-        if Picture.Count > 0 then
-            if not Confirm(OverrideImageQst) then
-                Error('');
-
-        ClientFileName := '';
-        FileName := FileManagement.UploadFile(SelectPictureTxt, ClientFileName);
-        if FileName = '' then
-            Error('');
-
-        Clear(Picture);
-        Picture.ImportFile(FileName, ClientFileName);
-        Modify(true);
-        OnImportFromDeviceOnAfterModify(Rec);
-
-        if FileManagement.DeleteServerFile(FileName) then;
-    end;
-
-    local procedure DoTakeNewPicture(): Boolean
-    var
-        PictureInstream: InStream;
-        PictureDescription: Text;
-    begin
-        if Rec.Picture.Count() > 0 then
-            if not Confirm(OverrideImageQst) then
-                exit(false);
-
-
-        exit(false);
-    end;
-
-    local procedure SetEditableOnPictureActions()
-    begin
-        DeleteExportEnabled := Picture.Count <> 0;
-    end;
-
-    procedure IsCameraAvailable(): Boolean
-    begin
-
-    end;
-
-    procedure SetHideActions()
-    begin
-        HideActions := true;
-    end;
-
-    procedure DeleteShoePicture()
-    begin
-        TestField("No.");
-
-        if not Confirm(DeleteImageQst) then
-            exit;
-
-        Clear(Picture);
-        Modify(true);
-
-        OnAfterDeleteShoePicture(Rec);
-    end;
-
-    [IntegrationEvent(false, false)]
-    local procedure OnAfterDeleteShoePicture(var Shoe: Record Shoe)
-    begin
-    end;
-
-    [IntegrationEvent(false, false)]
-    local procedure OnAfterTakeNewPicture(var Shoe: Record Shoe; IsPictureAdded: Boolean)
-    begin
-    end;
-
-    [IntegrationEvent(false, false)]
-    local procedure OnImportFromDeviceOnAfterModify(var Shoe: Record Shoe)
-    begin
-    end;
-}
-
 codeunit 50105 "Assisted Setup Shoe"
 {
     Access = Internal;
@@ -1032,45 +800,68 @@ page 50106 "Assisted Setup Shoe"
                 }
             }
 
-            group(FirstPage)
+            group(Step1)
             {
                 Caption = '';
-                Visible = TopBannerVisible;
-                group("Welcome")
+                Visible = IntroVisible;
+                group("Para1.1")
                 {
                     Caption = 'Welcome to Shoe Extension Setup';
-
-                    group(Introduction)
+                    group("Para1.1.1")
                     {
                         Caption = '';
-                        InstructionalText = 'The Shoe Extension extension allow you to manage your shoes business, by providing overview of models, planning, material ordering and managing resellers';
-
-                        field(DocumentationPart; 'For more information, see the documentation.')
-                        {
-                            ApplicationArea = Basic, Suite;
-                            Caption = ' ';
-                            ShowCaption = false;
-                            Editable = false;
-                            ToolTip = 'Learn more';
-                        }
+                        InstructionalText = 'With the Shoe Extension yuu can completely monitor your business from one place. The feature covers the whole business process from planning phase, defining different models, ordering materials, to direct communication to your resellers.';
                     }
 
-                    group(Terms3)
-                    {
-                        Caption = '';
+                }
+                group("Para1.2")
+                {
+                    Caption = 'Let''s go!';
+                    InstructionalText = 'Choose Next to get started and import a list of your shoe models together with relevant information.';
+                }
+            }
+            group(Step2)
+            {
 
-                        field(AcceptConsent; ConsentAccepted)
-                        {
-                            ApplicationArea = Basic, Suite;
-                            Editable = true;
-                            Caption = 'I understand and accept the terms';
-                            ToolTip = 'Acknowledge that you have read and accept the terms.';
-                        }
-                    }
-                    group(Import)
-                    {
+                Caption = 'Before we start';
+                InstructionalText = 'By enabling this extension you consent to sharing your data with an external system. Your use of this extension may be subject to additional licensing terms from AMC. To enable the service you must read and accept the terms of use.';
 
-                    }
+                Visible = ConsentVisible;
+                field(AcceptConsent; ConsentAccepted)
+                {
+                    ApplicationArea = Basic, Suite;
+                    Editable = true;
+                    Caption = 'I understand and accept the terms';
+                    ToolTip = 'Acknowledge that you have read and accept the terms.';
+
+                    trigger OnValidate()
+                    begin
+                        if not ConsentAccepted then
+                            ShowIntroStep();
+                        NextEnabled := ConsentAccepted;
+                    end;
+                }
+
+            }
+            group(Step3)
+            {
+                Caption = 'Import Configuration Package';
+                Visible = ImportConfigPackVisible;
+                group("Para3.1")
+                {
+                    Caption = 'Want to get started. Let''s import all models. Please choose actions below';
+                    InstructionalText = 'Configuration Package allows you to start using the extension on the fastest way. All your models will be imported and avilable in the Shoe list.';
+
+                }
+            }
+            group(Step4)
+            {
+                Caption = '';
+                Visible = DoneVisible;
+                group("Para5.1")
+                {
+                    Caption = 'That''s it!';
+                    InstructionalText = 'Choose Finish to start using your new feature. Enjoy !';
                 }
             }
         }
@@ -1080,18 +871,36 @@ page 50106 "Assisted Setup Shoe"
 
         area(Navigation)
         {
-            action(ImportPackage)
+
+
+        }
+        area(Processing)
+        {
+            action(Back)
             {
                 ApplicationArea = Basic, Suite;
-                Caption = 'Import shoes models';
-                Ellipsis = true;
-                Image = Import;
+                Caption = 'Back';
+                Enabled = BackEnabled;
+                Visible = BackEnabled;
+                Image = PreviousRecord;
                 InFooterBar = true;
-                ToolTip = 'Import a .rapidstart package file.';
 
                 trigger OnAction()
                 begin
-                    ConfigXMLExchange.ImportPackageXMLFromClient;
+                    NextStep(true);
+                end;
+            }
+            action(Next)
+            {
+                ApplicationArea = Basic, Suite;
+                Caption = 'Next';
+                Enabled = NextEnabled;
+                Image = NextRecord;
+                InFooterBar = true;
+
+                trigger OnAction()
+                begin
+                    NextStep(false);
                 end;
             }
             action("Finish")
@@ -1100,6 +909,8 @@ page 50106 "Assisted Setup Shoe"
                 Caption = 'Finish';
                 Image = Close;
                 InFooterBar = true;
+                Visible = FinishEnabled;
+
                 ToolTip = 'Choose Finish to complete the Shoe Extension setup.';
 
                 trigger OnAction();
@@ -1110,6 +921,25 @@ page 50106 "Assisted Setup Shoe"
                     CurrPage.Close();
                 end;
             }
+            action(ImportPackage)
+            {
+                ApplicationArea = Basic, Suite;
+                Caption = 'Import shoes models';
+                Enabled = ImportConfigPackVisible;
+                Visible = ImportConfigPackVisible;
+                Ellipsis = true;
+                Image = Import;
+                InFooterBar = true;
+                ToolTip = 'Import a .rapidstart package file.';
+
+                trigger OnAction()
+                begin
+                    //ConfigXMLExchange.ImportPackageXMLFromClient;
+                    ImportPack();
+
+                end;
+            }
+
         }
     }
 
@@ -1126,6 +956,7 @@ page 50106 "Assisted Setup Shoe"
         GuidedExperience.ResetAssistedSetup(ObjectType::Page, PAGE::"Assisted Setup Shoe");
         IsComplete := GuidedExperience.IsAssistedSetupComplete(ObjectType::Page, PAGE::"Assisted Setup Shoe");
         ConsentAccepted := IsComplete;
+        ShowIntroStep;
 
     end;
 
@@ -1138,20 +969,115 @@ page 50106 "Assisted Setup Shoe"
                 TopBannerVisible := MediaResources."Media Reference".HASVALUE;
     end;
 
+    local procedure NextStep(Backwards: Boolean)
+    begin
+        if Backwards then
+            Step := Step - 1
+        else
+            Step := Step + 1;
+
+        case Step of
+            Step::Intro:
+                ShowIntroStep;
+            Step::Consent:
+                ShowConsentStep();
+            Step::"Import Config Pack":
+                begin
+                    ShowImportConfigPack;
+
+                end;
+            Step::Done:
+                ShowDoneStep;
+        end;
+        CurrPage.Update(true);
+    end;
+
+    local procedure ShowDoneStep()
+    begin
+        ResetWizardControls;
+        DoneVisible := true;
+        NextEnabled := false;
+        FinishEnabled := true;
+        ConsentVisible := false;
+        BackEnabled := true;
+    end;
+
+    local procedure ShowConsentStep()
+    begin
+        ResetWizardControls;
+        //Co := true;
+        NextEnabled := ConsentAccepted;
+        ConsentVisible := true;
+    end;
+
+    local procedure ShowImportConfigPack()
+    begin
+        ResetWizardControls;
+        ImportConfigPackVisible := true;
+        ConsentVisible := false;
+        //NextEnabled := true;
+    end;
+
+    local procedure ResetWizardControls()
+    begin
+        // Buttons
+        BackEnabled := true;
+        NextEnabled := true;
+        FinishEnabled := false;
+
+        // Tabs
+        ImportConfigPackVisible := false;
+        IntroVisible := false;
+        ConsentVisible := false;
+    end;
+
+    local procedure ShowIntroStep()
+    begin
+        ResetWizardControls;
+        IntroVisible := true;
+        BackEnabled := false;
+    end;
+
+    local procedure ImportPack()
+
+    var
+        InStr: InStream;
+        OutStr: OutStream;
+        FileName: Text;
+        TempBlob: Codeunit "Temp Blob";
+        ConfigPackageImport: Codeunit "Config. Package - Import";
+        ConfigSetupTemp: Record "Config. Setup" temporary;
+    begin
+
+        if UploadIntoStream('Config. Package Selection', '', '', FileName, InStr) then begin
+            TempBlob.CreateOutStream(OutStr);
+            CopyStream(OutStr, InStr);
+            ConfigPackageImport.ImportRapidStartPackageStream(TempBlob, ConfigSetupTemp);
+
+        end;
+    end;
+
+
     var
         MediaRepository: Record "Media Repository";
         MediaResources: Record "Media Resources";
         ConfigXMLExchange: Codeunit "Config. XML Exchange";
         Notification: Notification;
+        Step: Option Intro,Consent,"Import Config Pack",Done;
         TopBannerVisible: Boolean;
         IsComplete: Boolean;
-
-        HasBCBasicLicense: Boolean;
+        BackEnabled: Boolean;
+        NextEnabled: Boolean;
+        FinishEnabled: Boolean;
         ConsentAccepted: Boolean;
-        NotSupportedCompanyMsg: Label 'This extension is intended only for one company.';
-        LicenseNotAssignedMsg: Label 'At least one user must have the Basic license assigned.';
+        IntroVisible: Boolean;
+        DoneVisible: Boolean;
+        ImportConfigPackVisible: Boolean;
+        ConsentVisible: Boolean;
+
         DocLbl: Label 'https://go.microsoft.com/fwlink/?linkid=2130800', Locked = true;
         TermsOfUseLbl: Label ' https://go.microsoft.com/fwlink/?linkid=2130900', Locked = true;
+
 }
 
 enum 50109 "Shoe Season"
