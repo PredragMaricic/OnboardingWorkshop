@@ -1,7 +1,7 @@
 {
   "id":  "4fff6b7a-5fab-40cd-8de3-8b8f2e8309db",
   "name":  "Shoe Application",
-  "publisher":  "Microsoft",
+  "publisher":  "MicrosoftShoes",
   "description":  "Provides business processes that are typical for small and mid-sized companies, such as sales and purchasing, and customer and vendor management, plus complex processes, such as assembly, manufacturing, service, and directed warehouse management. https://docs.microsoft.com/en-us/dynamics365/business-central/across-business-functionality",
   "version":  "20.0.0.1",
   "privacyStatement":  "https://go.microsoft.com/fwlink/?LinkId=724009",
